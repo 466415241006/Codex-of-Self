@@ -13,6 +13,56 @@ const TOTAL_Q = FLAT.length;
 
 let answers = new Array(TOTAL_Q).fill(0); // 0 = unanswered, else 1..5
 let cur = 0;
+let selectedClass = null;
+let charName = '';
+let muted = false;
+let audioCtx = null;
+
+/* ---------------- Sound (Web Audio, no files needed) ---------------- */
+function ensureAudio() {
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) audioCtx = new Ctx();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq = 440, dur = 0.09, type = 'sine', vol = 0.14, delay = 0) {
+  if (muted) return;
+  ensureAudio();
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime + delay;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + dur);
+}
+function playClick() { beep(600, 0.05, 'triangle', 0.12); }
+function playSelect(val) { beep(380 + val * 55, 0.09, 'square', 0.11); }
+function playStageClear() {
+  [523, 659, 784].forEach((f, i) => beep(f, 0.14, 'triangle', 0.13, i * 0.09));
+}
+function playFanfare() {
+  [523, 659, 784, 1046].forEach((f, i) => beep(f, 0.18, 'triangle', 0.14, i * 0.1));
+}
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+}
+
+/* ---------------- Screen shake ---------------- */
+function shakePanel(screenId) {
+  const panel = document.querySelector(`#${screenId} .panel`);
+  if (!panel) return;
+  panel.classList.remove('shake');
+  void panel.offsetWidth;
+  panel.classList.add('shake');
+  setTimeout(() => panel.classList.remove('shake'), 420);
+}
 
 /* ---------------- HERO preview chips ---------------- */
 function renderPreview() {
@@ -22,6 +72,38 @@ function renderPreview() {
       <span class="ic">${s.icon}</span>
       <span class="nm">${s.short}</span>
     </div>`).join('');
+}
+
+/* ---------------- Class select ---------------- */
+function goToClassSelect() {
+  showScreen('screen-class');
+  renderClassGrid();
+}
+
+function renderClassGrid() {
+  const el = document.getElementById('classGrid');
+  el.innerHTML = CLASSES.map(c => `
+    <div class="class-card ${selectedClass === c.id ? 'picked' : ''}" onclick="pickClass('${c.id}')">
+      <span class="ic">${c.icon}</span>
+      <div class="nm">${c.name}</div>
+      <div class="tg">${c.tagline}</div>
+    </div>
+  `).join('');
+}
+
+function pickClass(id) {
+  selectedClass = id;
+  playClick();
+  renderClassGrid();
+  document.getElementById('btnConfirmClass').disabled = false;
+}
+
+function confirmClassAndStart() {
+  if (!selectedClass) return;
+  const nameInput = document.getElementById('charName');
+  charName = (nameInput.value || '').trim() || 'ผู้กล้านิรนาม';
+  playStageClear();
+  startQuiz();
 }
 
 /* ---------------- Navigation between screens ---------------- */
@@ -87,6 +169,7 @@ function selectAnswer(val, btnEl) {
   });
   document.getElementById('btnNext').disabled = false;
   updateXpHud(true);
+  playSelect(val);
   if (btnEl) {
     spawnFloatingXp(btnEl, val);
     spawnParticles(btnEl, STATS[FLAT[cur].si].color);
@@ -148,6 +231,8 @@ function showStageTransition(prevStat, nextStat) {
   document.getElementById('stClearName').textContent = prevStat.name;
   document.getElementById('stNextName').textContent = `${nextStat.icon} ${nextStat.name}`;
   overlay.classList.add('show');
+  playStageClear();
+  shakePanel('screen-quiz');
   setTimeout(() => {
     overlay.classList.remove('show');
     renderQuestion();
@@ -198,7 +283,9 @@ function computeAndShowResults() {
   const xpWithinLevel = levelFloat - Math.floor(levelFloat);
 
   const rank = getRank(overallPct);
+  const classInfo = CLASSES.find(c => c.id === selectedClass) || CLASSES[0];
 
+  document.getElementById('classLine').textContent = `${classInfo.icon} ${classInfo.name} "${charName}"`;
   document.getElementById('rankTitle').textContent = rank.title;
   document.getElementById('rankSub').textContent = `${rank.sub} · คะแนนรวม ${overallPct}%`;
   document.getElementById('lvValue').textContent = level;
@@ -225,6 +312,8 @@ function computeAndShowResults() {
 
   renderRadar(perStat);
   showScreen('screen-result');
+  playFanfare();
+  shakePanel('screen-result');
 
   // animate fills after paint
   requestAnimationFrame(() => {
@@ -234,6 +323,23 @@ function computeAndShowResults() {
         el.style.width = el.dataset.w + '%';
       });
     }, 80);
+  });
+}
+
+/* ---------------- Save result card as image ---------------- */
+function saveCard() {
+  const node = document.getElementById('captureArea');
+  if (typeof html2canvas === 'undefined') {
+    alert('โหลดตัวช่วยสร้างรูปภาพไม่สำเร็จ (ต้องต่ออินเทอร์เน็ต) ลองใหม่อีกครั้ง');
+    return;
+  }
+  html2canvas(node, { backgroundColor: '#EDE3CC', scale: 2 }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `character-card-${(charName || 'player').replace(/\s+/g, '_')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(() => {
+    alert('สร้างรูปภาพไม่สำเร็จ ลองอีกครั้ง');
   });
 }
 
