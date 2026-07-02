@@ -51,7 +51,9 @@ function playFanfare() {
 }
 function toggleMute() {
   muted = !muted;
-  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+  const btn = document.getElementById('muteBtn');
+  btn.textContent = muted ? '🔇' : '🔊';
+  btn.classList.toggle('is-off', muted);
 }
 
 /* ---------------- Screen shake ---------------- */
@@ -62,6 +64,17 @@ function shakePanel(screenId) {
   void panel.offsetWidth;
   panel.classList.add('shake');
   setTimeout(() => panel.classList.remove('shake'), 420);
+}
+
+/* ---------------- Character portrait (image with emoji fallback) ---------------- */
+function portraitFrameHTML(classInfo, sizeClass) {
+  if (!classInfo) return '';
+  return `
+    <div class="portrait-frame ${sizeClass}" style="border-color:${classInfo.color};">
+      <img class="portrait-img" src="${classInfo.portrait}" alt="${classInfo.name}"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <span class="portrait-fallback" style="background:${classInfo.color}22;">${classInfo.icon}</span>
+    </div>`;
 }
 
 /* ---------------- HERO preview chips ---------------- */
@@ -84,7 +97,7 @@ function renderClassGrid() {
   const el = document.getElementById('classGrid');
   el.innerHTML = CLASSES.map(c => `
     <div class="class-card ${selectedClass === c.id ? 'picked' : ''}" onclick="pickClass('${c.id}')">
-      <span class="ic">${c.icon}</span>
+      ${portraitFrameHTML(c, 'sm')}
       <div class="nm">${c.name}</div>
       <div class="tg">${c.tagline}</div>
     </div>
@@ -102,7 +115,19 @@ function confirmClassAndStart() {
   if (!selectedClass) return;
   const nameInput = document.getElementById('charName');
   charName = (nameInput.value || '').trim() || 'ผู้กล้านิรนาม';
+  const classInfo = CLASSES.find(c => c.id === selectedClass);
+
+  document.getElementById('playerChip').innerHTML = `
+    ${portraitFrameHTML(classInfo, 'xs')}
+    <span class="chip-name">${charName}</span>
+  `;
+
   playStageClear();
+  // best-effort autoplay; silently ignored if no mp3 has been added yet
+  const bgMusic = document.getElementById('bgMusic');
+  if (bgMusic) { bgMusic.volume = 0.35; bgMusic.play().then(() => {
+    document.getElementById('musicBtn').classList.remove('is-off');
+  }).catch(() => {}); }
   startQuiz();
 }
 
@@ -144,9 +169,13 @@ function renderQuestion() {
   document.getElementById('qCount').textContent = `คำถาม ${cur + 1} / ${TOTAL_Q}`;
   document.getElementById('progressFill').style.width = `${(cur / TOTAL_Q) * 100}%`;
 
+  const introHTML = (item.qi === 0 && stat.intro)
+    ? `<div class="q-intro">${stat.intro}</div>` : '';
+
   const area = document.getElementById('questionArea');
   area.innerHTML = `
     <div class="q-block">
+      ${introHTML}
       <span class="q-num">คำถามที่ ${item.qi + 1} ของแขนง ${stat.name}</span>
       <div class="q-text">${item.text}</div>
       <div class="scale" id="scaleBtns">
@@ -230,13 +259,14 @@ function showStageTransition(prevStat, nextStat) {
   document.getElementById('stIcon').textContent = nextStat.icon;
   document.getElementById('stClearName').textContent = prevStat.name;
   document.getElementById('stNextName').textContent = `${nextStat.icon} ${nextStat.name}`;
+  document.getElementById('stQuote').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
   overlay.classList.add('show');
   playStageClear();
   shakePanel('screen-quiz');
   setTimeout(() => {
     overlay.classList.remove('show');
     renderQuestion();
-  }, 1100);
+  }, 1600);
 }
 
 /* ---------------- Keyboard shortcuts ---------------- */
@@ -285,7 +315,10 @@ function computeAndShowResults() {
   const rank = getRank(overallPct);
   const classInfo = CLASSES.find(c => c.id === selectedClass) || CLASSES[0];
 
-  document.getElementById('classLine').textContent = `${classInfo.icon} ${classInfo.name} "${charName}"`;
+  document.getElementById('resultPortrait').innerHTML = `
+    ${portraitFrameHTML(classInfo, 'lg')}
+    <div class="portrait-caption">${classInfo.icon} ${classInfo.name} · "${charName}"</div>
+  `;
   document.getElementById('rankTitle').textContent = rank.title;
   document.getElementById('rankSub').textContent = `${rank.sub} · คะแนนรวม ${overallPct}%`;
   document.getElementById('lvValue').textContent = level;
@@ -298,6 +331,7 @@ function computeAndShowResults() {
   document.getElementById('strengthDesc').textContent = strongest.desc_high;
   document.getElementById('growthName').textContent = `${weakest.icon} ${weakest.name} (${weakest.pct}%)`;
   document.getElementById('growthDesc').textContent = weakest.desc_low;
+  document.getElementById('questText').textContent = weakest.quest || '';
 
   // stat list
   document.getElementById('statList').innerHTML = perStat.map(s => `
@@ -326,7 +360,56 @@ function computeAndShowResults() {
   });
 }
 
-/* ---------------- Save result card as image ---------------- */
+/* ---------------- Toast ---------------- */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ---------------- Share challenge ---------------- */
+function shareChallenge() {
+  const url = window.location.href.split('#')[0];
+  const text = `⚔️ ท้าประลอง! มาลองทำ "ตำนานแห่งตัวตน" แบบประเมินสถานะชีวิต 6 แขนงกับฉันสิ แล้วดูว่าใครเลเวลสูงกว่ากัน ✦\n${url}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('คัดลอกข้อความชวนเพื่อนแล้ว!'))
+      .catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('คัดลอกข้อความชวนเพื่อนแล้ว!'); }
+  catch (e) { showToast('คัดลอกไม่สำเร็จ ลองคัดลอกลิงก์เอง'); }
+  ta.remove();
+}
+
+/* ---------------- Background music (plays assets/music.mp3 — add your own file) ---------------- */
+function toggleMusic() {
+  const audio = document.getElementById('bgMusic');
+  const btn = document.getElementById('musicBtn');
+  if (!audio) return;
+  if (audio.paused) {
+    audio.volume = 0.35;
+    audio.play().then(() => {
+      btn.classList.remove('is-off');
+    }).catch(() => {
+      showToast('ยังไม่พบไฟล์เพลง วางไฟล์ไว้ที่ assets/music.mp3 แล้วลองใหม่');
+    });
+  } else {
+    audio.pause();
+    btn.classList.add('is-off');
+  }
+}
 function saveCard() {
   const node = document.getElementById('captureArea');
   if (typeof html2canvas === 'undefined') {

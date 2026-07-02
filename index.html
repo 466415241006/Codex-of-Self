@@ -3,21 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ตำนานแห่งตัวตน — ประเมินสถานะชีวิตคุณ</title>
+<title>ตำนานแห่งตัวตน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700&family=Noto+Serif+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="assets/logo.png" type="image/png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <div class="stage">
 
   <div class="brand">
+    
     <span class="rune">⟡</span>
     <span>Codex of Self &middot; ตำนานแห่งตัวตน</span>
     <span class="rune">⟡</span>
-    <button class="mute-btn" id="muteBtn" onclick="toggleMute()" title="เปิด/ปิดเสียง">🔊</button>
+    <div class="hud-controls">
+      <button class="mute-btn" id="muteBtn" onclick="toggleMute()" title="เปิด/ปิดเสียง">🔊</button>
+      <button class="mute-btn is-off" id="musicBtn" onclick="toggleMusic()" title="เปิด/ปิดเพลงพื้นหลัง">🎵</button>
+    </div>
   </div>
 
   <!-- HERO -->
@@ -46,7 +51,7 @@
       <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
       <div class="eyebrow" style="text-align:center; margin-bottom:10px;">ก่อนออกเดินทาง</div>
       <h2 class="hero-title" style="font-size:clamp(24px,4.5vw,34px);">เลือก<em>คลาส</em>ของคุณ</h2>
-      <p class="hero-sub" style="margin-bottom:20px;">เลือกบทบาทที่ใช่ แล้วตั้งชื่อตัวละคร (จะไม่กระทบคะแนนใดๆ แค่เพิ่มอรรถรส)</p>
+      <p class="hero-sub" style="margin-bottom:20px;">เลือกบทบาทที่ใช่ แล้วตั้งชื่อตัวละคร</p>
 
       <div class="class-grid" id="classGrid"></div>
 
@@ -76,6 +81,7 @@
           </div>
         </div>
         <div class="hud-right">
+          <div class="player-chip" id="playerChip"></div>
           <div class="eyebrow" id="qCount">คำถาม 1 / 24</div>
           <div class="xp-hud" id="xpHud">⚡ <span id="liveXpVal">0</span> / <span id="liveXpMax">0</span> XP</div>
         </div>
@@ -95,6 +101,7 @@
         <div class="st-icon" id="stIcon">✦</div>
         <div class="st-clear">ด่าน <span id="stClearName"></span> ผ่านแล้ว!</div>
         <div class="st-next">ปลดล็อกแขนงถัดไป: <span id="stNextName"></span></div>
+        <div class="st-quote" id="stQuote"></div>
       </div>
     </div>
   </div>
@@ -107,7 +114,7 @@
       <div id="captureArea">
         <div class="capture-brand">⟡ Codex of Self · ตำนานแห่งตัวตน ⟡</div>
         <div class="result-top">
-          <div class="class-line" id="classLine">—</div>
+          <div class="result-portrait" id="resultPortrait"></div>
           <div class="eyebrow">การ์ดตัวละครของคุณ</div>
           <h2 class="rank-title" id="rankTitle">—</h2>
           <div class="rank-sub" id="rankSub">—</div>
@@ -140,16 +147,29 @@
             <p id="growthDesc">—</p>
           </div>
         </div>
+
+        <div class="quest-card" id="questCard">
+          <span class="tag">◈ ภารกิจแนะนำ</span>
+          <p id="questText">—</p>
+        </div>
       </div>
 
       <div class="cta-row">
         <button class="btn ghost" onclick="restart()">↺ ผจญภัยใหม่อีกครั้ง</button>
+        <button class="btn ghost" onclick="shareChallenge()">🔗 ชวนเพื่อนมาท้าประลอง</button>
         <button class="btn" onclick="saveCard()">📸 บันทึกการ์ดเป็นรูปภาพ</button>
       </div>
     </div>
   </div>
 
 </div>
+
+<div class="toast" id="toast"></div>
+
+<!-- วางไฟล์เพลงของคุณที่ assets/music.mp3 (ชื่อไฟล์ต้องตรงเป๊ะ) แล้วปุ่ม 🎵 มุมขวาบนจะเล่น/หยุดไฟล์นี้อัตโนมัติ -->
+<audio id="bgMusic" loop preload="none">
+  <source src="assets/music.mp3" type="audio/mpeg">
+</audio>
 
 <!-- ลำดับสำคัญ: data.js ต้องโหลดก่อน app.js เสมอ -->
 <script src="js/data.js"></script>
