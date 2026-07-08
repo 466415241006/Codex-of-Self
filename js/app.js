@@ -295,6 +295,11 @@ function getRank(pct) {
   return RANKS.find(r => pct < r.max) || RANKS[RANKS.length - 1];
 }
 
+function getArchetype(id1, id2) {
+  const key = [id1, id2].sort().join('_');
+  return ARCHETYPES[key] || null;
+}
+
 function computeAndShowResults() {
   const perStat = STATS.map((s, si) => {
     const qs = FLAT.map((f, idx) => ({ ...f, idx })).filter(f => f.si === si);
@@ -307,8 +312,12 @@ function computeAndShowResults() {
   const totalMax = perStat.reduce((s, x) => x.max + s, 0);
   const overallPct = Math.round((totalRaw / totalMax) * 100);
 
-  // Level: 1 to 50 based on overall pct, plus fractional xp within level
-  const levelFloat = (overallPct / 100) * 50;
+  // Level: non-linear curve — mid scores climb slowly, top scores spike fast,
+  // so reaching a high level actually feels rare and earned.
+  // exponent > 1 compresses the low/mid range and rewards the last few % hard.
+  const LEVEL_CURVE_EXPONENT = 1.6;
+  const normalized = Math.pow(overallPct / 100, LEVEL_CURVE_EXPONENT);
+  const levelFloat = normalized * 50;
   const level = Math.max(1, Math.min(50, Math.floor(levelFloat) + 1));
   const xpWithinLevel = levelFloat - Math.floor(levelFloat);
 
@@ -332,6 +341,19 @@ function computeAndShowResults() {
   document.getElementById('growthName').textContent = `${weakest.icon} ${weakest.name} (${weakest.pct}%)`;
   document.getElementById('growthDesc').textContent = weakest.desc_low;
   document.getElementById('questText').textContent = weakest.quest || '';
+
+  const archetype = getArchetype(sorted[0].id, sorted[1].id);
+  const archetypeEl = document.getElementById('archetypeBadge');
+  if (archetype) {
+    archetypeEl.innerHTML = `
+      <span class="tag">${archetype.icon} ฉายาประจำตัว</span>
+      <div class="archetype-title">${archetype.name}</div>
+      <p class="archetype-desc">${archetype.desc}</p>
+    `;
+    archetypeEl.style.display = '';
+  } else {
+    archetypeEl.style.display = 'none';
+  }
 
   // stat list
   document.getElementById('statList').innerHTML = perStat.map(s => `

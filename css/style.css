@@ -300,6 +300,37 @@ a{color:inherit;}
   color: var(--ink-soft);
 }
 
+/* ---------- Archetype badge (top-2-stat epithet) ---------- */
+.archetype-badge{
+  text-align:center;
+  margin: 6px 0 20px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(91,74,135,0.14), rgba(156,59,46,0.08));
+  border: 1px solid rgba(91,74,135,0.4);
+}
+.archetype-badge .tag{
+  display:block;
+  font-family:'JetBrains Mono', monospace;
+  font-size:10px; letter-spacing:2px; text-transform:uppercase;
+  color: var(--violet);
+  margin-bottom:6px;
+}
+.archetype-title{
+  font-family:'Cinzel Decorative', 'Cinzel', serif;
+  font-weight:700;
+  font-size: clamp(19px, 3.6vw, 25px);
+  color: var(--ember);
+  margin-bottom:6px;
+}
+.archetype-desc{
+  font-size:13px;
+  color: var(--ink-soft);
+  line-height:1.7;
+  max-width:440px;
+  margin: 0 auto;
+}
+
 .progress-track{
   height:8px; border-radius:4px; background: rgba(46,36,24,0.15);
   overflow:hidden; margin-bottom:26px; border: 1px solid rgba(46,36,24,0.25);
