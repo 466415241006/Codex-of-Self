@@ -1,7 +1,9 @@
-# ⟡ ตำนานแห่งตัวตน (Codex of Self)
-[Codex of Self](https://466415241006.github.io/Codex-of-Self/)
+<h1 alige = "center">ตำนานแห่งตัวตน (Codex of Self)</h1>
+<div alige = "center">
+[Codex of Self](https://466415241006.github.io/Codex-of-Self/)<br>
 เว็บ static page ธีม RPG สำหรับทำแบบประเมินสถานะชีวิต 6 แขนง ตอบคำถามเชิงจิตวิทยา
 24 ข้อ แล้วรับการ์ดตัวละคร เลเวล ฉายาประจำตัว (archetype) และกราฟเรดาร์สรุปผล
+</div>
 ---
 ## ฟีเจอร์หลัก
 - แบบประเมิน 6 แขนง (พลกาย / ปัญญา / จิตใจ / สังคม / อาชีพ / ทรัพย์) รวม 24 ข้อ คำถามเขียนแบบ
